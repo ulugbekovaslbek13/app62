@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <title>MotionGuard AI - Junior Security</title>
+    <style>
+        :root { --bg: #000; --neon: #00ff00; --red: #ff0000; }
+        body { background: var(--bg); color: var(--neon); font-family: 'Courier New', monospace; text-align: center; padding: 20px; }
+        .camera-box { position: relative; display: inline-block; border: 2px solid #333; border-radius: 10px; overflow: hidden; }
+        video, canvas { display: block; width: 640px; height: 480px; }
+        canvas { position: absolute; top: 0; left: 0; opacity: 0.5; }
+        .status { margin: 20px; font-size: 24px; font-weight: bold; }
+        .alarm-active { animation: blink 0.5s infinite; color: var(--red); }
+        @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.2; } 100% { opacity: 1; } }
+        .controls { background: #111; padding: 15px; border-radius: 8px; display: inline-block; margin-top: 10px; }
+        button { background: var(--neon); color: #000; border: none; padding: 10px 20px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h2>🛡️ MOTION-GUARD v3.0</h2>
+    <p>Xonada harakat aniqlansa, tizim signal beradi!</p>
+
+    <div class="camera-box">
+        <video id="video" autoplay></video>
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <div id="status" class="status">TIZIM TAYYOR ✅</div>
+
+    <div class="controls">
+        <button onclick="startMonitor()">TIZIMNI YOQISH 🚀</button>
+        <button onclick="location.reload()" style="background: #555; color: #fff; margin-left: 10px;">O'CHIRISH</button>
+    </div>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const statusText = document.getElementById('status');
+        let prevImageData;
+
+        // Kameraga ruxsat olish
+        async function startMonitor() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                statusText.innerText = "KUZATUV KETMOQDA... 👀";
+                requestAnimationFrame(checkMotion);
+            } catch (err) {
+                alert("Kameraga ruxsat berilmadi!");
+            }
+        }
+
+        function checkMotion() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const currImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            
+            if (prevImageData) {
+                let diff = 0;
+                for (let i = 0; i < currImageData.data.length; i += 4) {
+                    // Piksellar orasidagi rang farqini hisoblash
+                    const rDiff = Math.abs(currImageData.data[i] - prevImageData.data[i]);
+                    const gDiff = Math.abs(currImageData.data[i+1] - prevImageData.data[i+1]);
+                    const bDiff = Math.abs(currImageData.data[i+2] - prevImageData.data[i+2]);
+                    
+                    if (rDiff + gDiff + bDiff > 100) {
+                        diff++;
+                    }
+                }
+
+                // Agar 1% dan ko'p piksel o'zgarsa, demak harakat bor
+                if (diff > (currImageData.data.length / 4) * 0.01) {
+                    triggerAlarm();
+                } else {
+                    statusText.classList.remove('alarm-active');
+                    statusText.innerText = "KUZATUV KETMOQDA... 👀";
+                }
+            }
+
+            prevImageData = currImageData;
+            requestAnimationFrame(checkMotion);
+        }
+
+        function triggerAlarm() {
+            statusText.innerText = "⚠️ HARAKAT ANIQLANDI!";
+            statusText.classList.add('alarm-active');
+            // Signal tovushi (ixtiyoriy: beep.mp3 qo'shishing mumkin)
+            console.warn("Harakat aniqlandi!");
+        }
+    </script>
+</body>
+</html>
